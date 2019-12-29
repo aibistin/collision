@@ -1,0 +1,35 @@
+{
+  "name": "collision",
+  "version": "1.0.0",
+  "description": "Get collision data from NYC",
+  "main": "bin/app.js",
+  "scripts": {
+    "test": "./node_modules/.bin/mocha --reporter spec t/**/*.js",
+    "testTest": "./node_modules/.bin/mocha --reporter spec t/test.js",
+    "testDb": "./node_modules/.bin/mocha  --reporter spec --inline-diffs t/DbTest.js",
+    "testDb1": "./node_modules/.bin/mocha --delay --reporter spec --inline-diffs t/DbTest.js",
+    "testDbDbg": "./node_modules/.bin/mocha --reporter spec --inspect-brk t/DbTest.js",
+    "db_test": "./node_modules/.bin/mocha --reporter tap --inline-diffs --colors --bail t/db_test.js",
+    "test_cleaner": "./node_modules/.bin/mocha --reporter tap --inline-diffs --colors --bail t/data_cleaning_test.js"
+  },
+  "author": "Austin Kenny",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^0.18.1",
+    "date-fns": "^1.30.1",
+    "eslint": "^6.5.1",
+    "moment": "^2.24.0",
+    "sqlite3": "^4.1.0",
+    "winston": "^3.2.1",
+    "yargs": "^12.0.5"
+  },
+  "devDependencies": {
+    "chai": "^4.2.0",
+    "chai-as-promised": "^7.1.1",
+    "describe": "^1.2.0",
+    "eslint-config-prettier": "^6.4.0",
+    "faker": "^4.1.0",
+    "mocha": "^6.2.1",
+    "supertest": "^4.0.2"
+  }
+}
