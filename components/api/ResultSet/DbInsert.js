@@ -145,7 +145,15 @@ const dbInserts = {
  ***************************************************************************/
 const DbInsert = class DBInsert {
     constructor(db) {
-        this.tables = ["collision", "street", "vehicle", "coordinate", "contributing_factor"];
+        this.tables = [
+            "collision",
+            "street",
+            "vehicle",
+            "coordinate",
+            "contributing_factor",
+            "collision_vehicle",
+            "collision_contributing_factor"
+        ];
         /* Cache some db tables */
         this.streetInDb = {}; // name : 'id'
         this.vehicleInDb = {}; // type_code : 'id'
@@ -229,7 +237,9 @@ const DbInsert = class DBInsert {
             const type_code = dbInserts.vehicle.table.type_code;
 
             if (this.vehicleInDb[type_code]) {
-                log.trace(`Vehicle: '${type_code}' already in db: '${this.vehicleInDb[type_code]}'`);
+                log.trace(
+                    `Vehicle: '${type_code}' already in db: '${this.vehicleInDb[type_code]}'`
+                );
                 collisionRec.collisionVehicles[vIdx++].vehicle_id = this.vehicleInDb[type_code];
                 this.count.existsAlready.vehicle++;
             } else {
@@ -238,8 +248,9 @@ const DbInsert = class DBInsert {
                     log.trace(`${logL}Result from vehicle insert ${this._toStr(result)}`);
                     this.count.vehicleInsertAttempts++;
                     if (result && result.id)
-                        this.vehicleInDb[type_code] = collisionRec.collisionVehicles[vIdx++].vehicle_id =
-                            result.id;
+                        this.vehicleInDb[type_code] = collisionRec.collisionVehicles[
+                            vIdx++
+                        ].vehicle_id = result.id;
                 } catch (e) {
                     log.error(`${logL}Error from vehicle insert, ${this._toStr(e)}`);
                 }
@@ -254,9 +265,12 @@ const DbInsert = class DBInsert {
             const factor = dbInserts.contributing_factor.table.factor;
 
             if (this.contribFactorInDb[factor]) {
-                log.trace(`C-factor: '${factor}' already in db: '${this.contribFactorInDb[factor]}'`);
-                collisionRec.collisionContribFactors[cIdx++].contributing_factor_id =
-                    this.contribFactorInDb[factor];
+                log.trace(
+                    `C-factor: '${factor}' already in db: '${this.contribFactorInDb[factor]}'`
+                );
+                collisionRec.collisionContribFactors[
+                    cIdx++
+                ].contributing_factor_id = this.contribFactorInDb[factor];
                 this.count.existsAlready.contributing_factor++;
             } else {
                 try {
@@ -295,7 +309,8 @@ const DbInsert = class DBInsert {
                     log.trace(`${logL}Result from coordinate insert ${this._toStr(result)}`);
                     this.count.coOrdinateInsertAttempts++;
                     if (result && result.id)
-                        this.coordinateInDb[longLat] = collisionRec.collision.coordinate_id = result.id;
+                        this.coordinateInDb[longLat] = collisionRec.collision.coordinate_id =
+                            result.id;
                 } catch (e) {
                     log.error(`${logL}Error from coordinate insert, ${this._toStr(e)}`);
                 }
@@ -303,6 +318,7 @@ const DbInsert = class DBInsert {
         }
 
         dbInserts.collision.table = collisionRec.collision;
+        /*TODO Need a transaction for collision, collision_vehicle, collision_contributing_factor */
         try {
             result = await this.insertSingleRow(dbInserts.collision, "collision");
             log.trace(`${logL}Result from collision insert ` + this._toStr(result));
@@ -388,7 +404,7 @@ const DbInsert = class DBInsert {
             */
         try {
             result = await this.db.insertIfNotExists(param, status => {
-                if (status.newInserts) {
+                if (status.newInsert) {
                     this.count.newInserts[tableName]++;
                 } else if (status.existsAlready) {
                     this.count.existsAlready[tableName]++;

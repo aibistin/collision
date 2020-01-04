@@ -131,9 +131,12 @@ const Transform = class {
                 if (streetRec.table.name) {
                     newStreetRecs.push(streetRec);
                 } else {
-                    log.error(`${logL}: Street has no name ${collisionRecIn[streetType]}`);
+                    const errorMsg = `${logL}: Street has no name '${
+                        collisionRecIn[streetType]
+                    }': ${this._toStr(streetRec)}`;
+                    log.error(errorMsg);
+                    log.error(`Input Record: ${this._toStr(collisionRecIn)}`);
                     this.count.badStreetNames++;
-                    throw new Error(`${logL}: Street has no name ${collisionRecIn[streetType]}`);
                 }
             }
             return newStreetRecs;
