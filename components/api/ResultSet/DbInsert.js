@@ -158,7 +158,7 @@ const DbInsert = class DBInsert {
         this.streetInDb = {}; // name : 'id'
         this.vehicleInDb = {}; // type_code : 'id'
         this.contribFactorInDb = {}; // factor : 'id'
-        this.coordinateInDb = {}; // factor : 'id'
+        this.coordinateInDb = {}; // longitude_latitude : 'id'
 
         this.count = {
             badStreets: 0,
