@@ -86,3 +86,4 @@ logs/
 *_old_*
 output/
 env/config.js
+/sql

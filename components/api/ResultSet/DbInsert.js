@@ -48,7 +48,7 @@ const dbInserts = {
                           on_street_id,
                           coordinate_id
                       )
-                      VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                      VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )`,
         insertCols: [
             "unique_key",
             "date",
@@ -171,6 +171,7 @@ const DbInsert = class DBInsert {
             collisionContribFactorInsertAttempts: 0,
             newInserts: {},
             existsAlready: {},
+            update: {},
             error: {}
         };
 
@@ -178,6 +179,7 @@ const DbInsert = class DBInsert {
             this.count.newInserts[table] = 0;
             this.count.existsAlready[table] = 0;
             this.count.error[table] = 0;
+            this.count.update[table] = 0;
         });
 
         this.db = db;
@@ -430,6 +432,27 @@ const DbInsert = class DBInsert {
         return result;
     }
 
+    /* Update Collision With Zip and Borough Code */
+    /*TODO Remove if not using! */
+    async updateCollision(collisionRec) {
+        let result;
+        const updateSQL = `
+        UPDATE collision
+            SET zip_code = ?,
+                borough_code = ?
+            WHERE unique_key = ?
+        `;
+        const { zip_code, borough_code, unique_key } = collisionRec;
+        const param = [zip_code, borough_code, unique_key];
+
+        try {
+            result = await this.db.update(updateSQL, param);
+        } catch (e) {
+            log.error(`${logL}FAIL UPDATE SQL = ${updateSQL}: ${param}: `, e);
+        }
+        this.count.update.collision;
+        return result;
+    }
     /* Utility Method */
 
     showLogCounterTotals(currentStage = "Current", headingStr = "") {

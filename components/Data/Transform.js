@@ -108,6 +108,10 @@ const Transform = class {
         }
 
         zip_code = val.check_and_clean_zip(zip_code);
+        /* Yes, redundant data. But it is easier than doing complex union/joins */
+        // collisionRecOut.collision.borough_code = borough_code;
+        // collisionRecOut.collision.zip_code = zip_code;
+
         collisionRecOut.streets = this.nycStreetTypes.reduce((newStreetRecs, streetType) => {
             /*Valid streetType:  ["on_street_name", "off_street_name", "cross_street_name"] */
             /* on_street_name -> on_street_id */

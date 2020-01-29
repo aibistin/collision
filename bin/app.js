@@ -136,6 +136,8 @@ async function addCollisionsToDb(allData, funcObj, existingUniqueKey) {
         try {
             res = await funcObj.dbInsert.insertCollision(newRec);
             if (res && Object.keys(res).length) log.trace(`Inserted rec got return: ${toStr(res)}`);
+            //res = await funcObj.dbInsert.updateCollision(newRec);
+            //if (res && Object.keys(res).length) log.trace(`Updated collision got return: ${toStr(res)}`);
         } catch (e) {
             console.log(`***********    Error insert: `, e);
             log.on("finish", error => {
