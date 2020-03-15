@@ -62,7 +62,6 @@ class CollisionDb {
     all(sql, params = [], cbParam = {}) {
         return new Promise((resolve, reject) => {
             this.db.all(sql, params, (error, rows) => {
-  
                 if (error) reject(error);
                 if (cbParam.callback) resolve(cbParam.callback(rows, cbParam.keyName));
                 resolve(rows);
@@ -196,7 +195,6 @@ class CollisionDb {
     /* INSERT                                                    */
     /* ----------------------------------------------------------*/
     insert(insertSQL, params = []) {
-
         return new Promise((resolve, reject) => {
             this.db.run(insertSQL, params, function(error) {
                 if (error) reject(error);
@@ -224,7 +222,6 @@ class CollisionDb {
             });
         });
     }
-
 
     /* ----------------------------------------------------------*/
     /* DELETE                                                    */

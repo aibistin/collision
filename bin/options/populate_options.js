@@ -14,14 +14,14 @@ const collision_year = {
     alias: "year",
     type: "number",
     choices: valid_years,
-    default: 2019
+    default: 2020
 };
 
 const start_year = {
     describe: "Get records for this year only",
     demand: false,
     alias: "start",
-    type: "string",
+    type: "number",
     choices: valid_years,
     default: 2012
 };
@@ -30,7 +30,7 @@ const end_year = {
     describe: "Get records ending and including this year",
     demand: false,
     alias: "end",
-    type: "string",
+    type: "number",
     choices: valid_years,
     default: 2020
 };
