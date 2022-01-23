@@ -33,42 +33,44 @@ Returns:
 */
 const axios = require("axios");
 /* Local */
-let config = require("../../env/config.js");
 const log = require("../../env/logger").moduleLogger;
+const ValidNYC = require("../../Data/Validation/ValidNYC");
 
 class CollisionQuery {
-    constructor(minStartYear = "2012") {
-        this.baseUrl = "https://data.cityofnewyork.us/resource/qiz3-axqb.json";
-        this.url = "";
-        this.minStartYear = minStartYear ? minStartYear : config.env.default.minStartYear;
-        this.defaultPageParam = {
-            offset: 0,
-            limit: 50000
-        };
+    constructor(apiConfig) {
+        this.queryStr = "";
+        /* TODO Validate apiConfig */
+        this.apiConfig = apiConfig;
     }
 
     apiKey() {
-        return `&$$app_token=${config.env.NYC.apiKey}`;
+        return `&$$app_token=${this.apiConfig.apiKey}`;
     }
 
     /* This will get a count of all rows of data available from NYC */
     async rowCount(year) {
-        this.url = "?$select=count(*)" + this.apiKey();
-        if (year) this.url += "&$where=" + this.yearStartEnd(year);
+        if (!ValidNYC.isYearGood(year)) {
+            let msg = `[rowCount] Needed a valid year, got ${year}`;
+            log.error(msg);
+            throw new Error(msg);
+        }
+
+        this.queryStr = "?$select=count(*)" + this.apiKey();
+        if (year) this.queryStr += "&$where=" + this.yearStartEnd(year);
         const res = await this.callCollisionApi();
         if (res.status !== 200) throw new Error(`Bad city api response, ${res.status}`);
         return res.data;
     }
 
-    async allYearData(apiParam = this.defaultPageParam) {
-        if (!apiParam.year || apiParam.year < this.minStartYear) {
-            log.error(`'allYearData' says, You must specify the starting year, ${apiParam.year}`);
-            throw new Error(
-                `'allYearData' says, You must specify the starting year, ${apiParam.year}`
-            );
+    async allYearData(year) {
+
+        if (!ValidNYC.isYearGood(year)) {
+            let msg = `[allYearData] Needed a valid year, got ${year}`;
+            log.error(msg);
+            throw new Error(msg);
         }
 
-        this.url =
+        this.queryStr =
             "?$select=" +
             "collision_id AS unique_key," +
             "crash_date AS date," +
@@ -92,7 +94,7 @@ class CollisionQuery {
             "vehicle_type_code_3 AS vehicle_type_code_3," +
             "vehicle_type_code_4 AS vehicle_type_code_4," +
             "vehicle_type_code_5 AS vehicle_type_code_5" +
-            `&$offset=${apiParam.offset}&$limit=${apiParam.limit}&$order=crash_date,crash_time` +
+            `&$offset=${apiParam.offset}&$limit=${apiParam.maxRecordsPerPage}&$order=crash_date,crash_time` +
             this.apiKey() +
             "&$where=" +
             this.yearStartEnd(apiParam.year);
@@ -103,19 +105,17 @@ class CollisionQuery {
     }
 
     /* Also normalize the vehicle_type labeling */
-    allVehicles(page = this.defaultPageParam) {
-        this.url =
+    allVehicles(apiParam = this.apiConfig) {
+        this.queryStr =
             "?$select=" +
             "vehicle_type_code1 AS  vehicle_type_code_1," +
             "vehicle_type_code2 AS  vehicle_type_code_2," +
-            "vehicle_type_code_3 AS vehicle_type_code_3," +
-            "vehicle_type_code_4 AS vehicle_type_code_4," +
-            "vehicle_type_code_5 AS vehicle_type_code_5" +
-            `&$offset=${page.offset}&$limit=${page.limit}&$order=date` +
+            "vehicle_type_code_3," +
+            "vehicle_type_code_4," +
+            "vehicle_type_code_5" +
+            `&$offset=${apiParam.offset}&$limit=${apiParam.maxRecordsPerPage}&$order=date` +
             this.apiKey();
-        return new Promise((resolve, reject) => {
-            this.axiosCall(resolve, reject);
-        });
+        return this.axiosCall(resolve, reject);
     }
 
     /*
@@ -133,48 +133,43 @@ class CollisionQuery {
       {},
       */
 
-    allLocations(page = this.defaultPageParam) {
-        this.url =
+    allLocations(apiParam = this.apiConfig) {
+        this.queryStr =
             "?$select=" +
             "borough,zip_code," +
             "latitude,longitude,location," +
             "on_street_name,off_street_name,cross_street_name" +
-            `&$offset=${page.offset}&$limit=${page.limit}&$order=date` +
+            `&$offset=${apiParam.offset}&$limit=${apiParam.maxRecordsPerPage}&$order=date` +
             this.apiKey();
-
-        return new Promise((resolve, reject) => {
-            this.axiosCall(resolve, reject);
-        });
+        return this.axiosCall(resolve, reject);
     }
 
-    allFactors(page = this.defaultPageParam) {
-        this.url =
+    allFactors(apiParam = this.apiConfig) {
+        this.queryStr =
             "?$select=" +
             "contributing_factor_vehicle_1," +
             "contributing_factor_vehicle_2," +
             "contributing_factor_vehicle_3," +
             "contributing_factor_vehicle_4," +
             "contributing_factor_vehicle_5" +
-            `&$offset=${page.offset}&$limit=${page.limit}&$order=date` +
+            `&$offset=${apiParam.offset}&$limit=${apiParam.maxRecordsPerPage}&$order=date` +
             this.apiKey();
 
-        return new Promise((resolve, reject) => {
-            this.axiosCall(resolve, reject);
-        });
+        return this.axiosCall(resolve, reject);
     }
 
     axiosCall(resolve, reject) {
         axios({
             method: "get",
-            baseURL: this.baseUrl,
-            url: this.url
+            baseURL: this.apiConfig.apiURL,
+            url: this.queryStr,
         })
-            .then(function(response) {
-                if (response.status !== 200) reject("Bad city response, " + response.status);
+            .then(function (response) {
+                if (response.status !== 200) reject(`Bad city response: ${response.status}`);
                 let body = response.data;
                 resolve(body);
             })
-            .catch(error => {
+            .catch((error) => {
                 log.error("            ++++++++++ START AXIOS ERROR +++++++++");
                 log.error(error);
                 log.error("            ++++++++++ END AXIOS ERROR +++++++++");
@@ -184,8 +179,8 @@ class CollisionQuery {
     callCollisionApi() {
         return axios({
             method: "get",
-            baseURL: this.baseUrl,
-            url: this.url
+            baseURL: this.apiConfig.apiURL,
+            url: this.queryStr,
         });
     }
 
@@ -210,7 +205,22 @@ class CollisionQuery {
         // return `accident_date > '${startDate}' AND accident_date <= '${endDate}'`;
         return `crash_date > '${startDate}' AND crash_date <= '${endDate}'`;
     }
-        // return `accident_date > '${startDate}' AND accident_date <= '${endDate}'`;
+    // return `accident_date > '${startDate}' AND accident_date <= '${endDate}'`;
+
+    static isGoodYear(year) {
+        return year && year >= this.apiConfig.startYear && year <= this.apiConfig.endYear;
+        /*
+        if (
+            !year ||
+            year < this.apiConfig.startYear ||
+            year > this.apiConfig.endYear
+        ) {
+            let msg = `[allYearData] Need a startYear, got ${year}`;
+            log.error(msg);
+            throw new Error(msg);
+        }
+        */
+    }
 }
 
 module.exports = CollisionQuery;

@@ -6,39 +6,40 @@
 const sqlite3 = require("sqlite3").verbose();
 const logL = "[CollisionDb]: ";
 const log = require("../../env/logger").moduleLogger;
+const config = require("../../env/config");
 
 class CollisionDb {
-    constructor(pathToDb = "c:\\Users\\ak1\\Apps\\collision\\db\\collision_dec.db") {
-        this.db = new sqlite3.cached.Database(pathToDb, error => {
+    constructor(collisionDb = config.env.collisionDb){ 
+        const pathToDb = collisionDb.dbStorage;
+        this.db = new sqlite3.cached.Database(pathToDb, (error) => {
             if (error) {
-                log.error(`${logL}Failed connecting to db!: ${pathToDb}`, error);
+                log.error(`${logL}Failed connecting to ${pathToDb}`, error);
                 throw new Error(error);
             }
-            console.count(`${logL}Connected to the database`);
+            console.count(`${logL}Connected to ${collisionDb.dbName}`);
         });
         this.db.exec("PRAGMA foreign_keys = ON");
-
         this.uniqueConstraintRx = /UNIQUE constraint failed/;
     }
 
     /* Run */
     run(sql, params = [], _callback) {
-        this.db.run(sql, params, function(error) {
+        this.db.run(sql, params, function (error) {
             if (error) throw new Error(error);
             /* 
                this.lastID:  has a value, only after a successful insert.
                this.changes: has a value, only after a successful update.
-             */
+            */
             return _callback({
                 id: this.lastID,
-                changes: this.changes
+                changes: this.changes,
             });
         });
     }
 
     /* Exec */
     exec(sqlTransaction, _callback) {
-        this.db.exec(sqlTransaction, error => {
+        this.db.exec(sqlTransaction, (error) => {
             if (error) throw new Error(error);
             _callback();
         });
@@ -62,9 +63,11 @@ class CollisionDb {
     all(sql, params = [], cbParam = {}) {
         return new Promise((resolve, reject) => {
             this.db.all(sql, params, (error, rows) => {
-                if (error) reject(error);
-                if (cbParam.callback) resolve(cbParam.callback(rows, cbParam.keyName));
-                resolve(rows);
+                if (error) {
+                    reject(error);
+                } else if (cbParam.callback) {
+                    resolve(cbParam.callback(rows, cbParam.keyName));
+                }
             });
         });
     }
@@ -104,7 +107,7 @@ class CollisionDb {
     }
 
     close() {
-        this.db.close(error => {
+        this.db.close((error) => {
             if (error) {
                 log.error(`${logL}Error in close!`);
                 throw new Error(error);
@@ -118,10 +121,14 @@ class CollisionDb {
        Sets these status properties
        { error: false, existsAlready: false, newInsert: false };
     */
-    async insertIfNotExists(param, callback) {
+    insertIfNotExists(param, callback) {
         let { selectSQL, insertSQL, selectParam, insertParam } = param;
         let result = {};
-        let status = { error: false, existsAlready: false, newInsert: false };
+        let status = {
+            error: false,
+            existsAlready: false,
+            newInsert: false,
+        };
         return new Promise(async (resolve, reject) => {
             try {
                 result = await this.insert(insertSQL, insertParam);
@@ -148,7 +155,7 @@ class CollisionDb {
         });
     }
 
-    async getEachStreetNameLike(param, dealWithRow) {
+    getEachStreetNameLike(param, dealWithRow) {
         let getEach = () => {
             return new Promise((resolve, reject) => {
                 let allRows = [];
@@ -170,12 +177,15 @@ class CollisionDb {
                 }
             });
         };
-
-        try {
-            return await getEach();
-        } catch (e) {
-            log.error(`${logL}Error in getStreeNamesLike: `, e);
-        }
+        let result;
+        (async () => {
+            try {
+                result = await getEach();
+            } catch (e) {
+                log.error(`${logL}Error in getStreeNamesLike: `, e);
+            }
+        })();
+        return result;
     }
 
     /* ----------------------------------------------------------*/
@@ -196,7 +206,7 @@ class CollisionDb {
     /* ----------------------------------------------------------*/
     insert(insertSQL, params = []) {
         return new Promise((resolve, reject) => {
-            this.db.run(insertSQL, params, function(error) {
+            this.db.run(insertSQL, params, function (error) {
                 if (error) reject(error);
                 /* 
                   'this' contains only 2 properties after a successful run.
@@ -205,7 +215,7 @@ class CollisionDb {
                 */
                 resolve({
                     id: this.lastID,
-                    changes: this.changes
+                    changes: this.changes,
                 });
             });
         });
@@ -214,9 +224,9 @@ class CollisionDb {
     /* PREPARE                                                    */
     /* ----------------------------------------------------------*/
 
-    async update(sql, params = []) {
+    update(sql, params = []) {
         return new Promise((resolve, reject) => {
-            this.db.run(sql, params, function(error) {
+            this.db.run(sql, params, function (error) {
                 if (error) reject(error);
                 resolve(params);
             });
@@ -227,15 +237,16 @@ class CollisionDb {
     /* DELETE                                                    */
     /* ----------------------------------------------------------*/
 
-    async delete(sql, params = []) {
+    delete(sql, params = []) {
         return new Promise((resolve, reject) => {
-            this.db.run(sql, params, function(error) {
+            this.db.run(sql, params, function (error) {
                 if (error) reject(error);
                 resolve(params);
             });
         });
     }
 
+    /* TODO Static method somewhere else */
     _toStr(obj = {}) {
         return JSON.stringify(obj, null, 2);
     }

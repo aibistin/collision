@@ -7,95 +7,94 @@ chai.use(chaiAsPromised);
 const expect = chai.expect;
 const faker = require("faker");
 /* Local */
+const env = require("../env/config").env;
+const { NameFix } = require("../env/nycConfig"); // ApiParam, Limit, NameFix,
 const CollisionDb = require("../components/api/CollisionDb");
 
 /* Tables */
-const Valid = require("../components/api/Validation/Valid.js");
-const clean_up = require("../components/api/Validation/clean_up");
-const {
-    boroughCodes,
-    check_and_clean_street_name,
-    check_and_clean_zip,
-    to_borough_code,
-    from_borough_code,
-    remove_all_spaces,
-    trim_lc_and_remove_double_spaces
-} = clean_up;
+const ValidNYC = require("../Data/Validation/ValidNYC");
+
 /* Fixtures */
 const logL = "[db_test] ";
-// let testDb = "c:\\Users\\ak1\\Apps\\collision\\db\\collision_test_1.db";
-let testDb = "c:\\Users\\ak1\\Apps\\collision\\db\\collision_nov.db";
-
+const testDb = env.collisionDbTest;
+// console.log("[db_test] ENV: ", env);
+console.log("TEST-DB: ", testDb);
+const validNYC = new ValidNYC();
 /*  Test Fixtures   */
 let dbTest = {
     streetTest: {
         testLabel: "TEST 1: Street Test: ",
         tableName: "street",
         table: {
-            name: check_and_clean_street_name(
+            name: validNYC.checkAndCleanStreetName(
                 faker.address.streetName() + " " + faker.address.streetSuffix()
             ),
-            borough_code: boroughCodes[Math.floor(Math.random() * boroughCodes.length)],
-            zip_code: check_and_clean_zip(faker.address.zipCode())
+            borough_code:
+                NameFix.boroughCodeToName[
+                    Math.floor(Math.random() * NameFix.boroughCodeToName.length)
+                ],
+            // zip_code: validNYC.checkAndCleanZip(faker.address.zipCode()),
+            zip_code: faker.address.zipCode(),
         },
         /* Street */
         insertSQL: `INSERT INTO street ( name, borough_code, zip_code) VALUES ( ?, ?, ?) `,
         insertCols: ["name", "borough_code", "zip_code"],
         selectCols: ["name", "borough_code", "zip_code"],
         expectCols: ["id", "name", "borough_code", "zip_code"],
-        selectSQL: `SELECT id, name, borough_code, zip_code FROM street WHERE name=? AND borough_code=? AND zip_code=? `
+        selectSQL: `SELECT id, name, borough_code, zip_code FROM street WHERE name=? AND borough_code=? AND zip_code=? `,
     },
     vehicleTest: {
         testLabel: "TEST 2: Vehicle Test: ",
         tableName: "vehicle",
         table: {
-            type_code: trim_lc_and_remove_double_spaces(faker.random.objectElement())
+            type_code: validNYC.trimLcAndRemoveDoubleSpaces(faker.random.objectElement()),
         },
         insertSQL: `INSERT INTO vehicle (type_code) VALUES (?)`,
         insertCols: ["type_code"],
         selectCols: ["type_code"],
         expectCols: ["id", "type_code"],
-        selectSQL: `SELECT id, type_code FROM vehicle WHERE type_code = ?`
+        selectSQL: `SELECT id, type_code FROM vehicle WHERE type_code = ?`,
     },
     coOrdinateTest: {
         testLabel: "TEST 3: CoOrdinate Test: ",
         tableName: "coordinate",
         table: {
             latitude: Number(faker.address.latitude()),
-            longitude: Number(faker.address.longitude())
+            longitude: Number(faker.address.longitude()),
         },
         insertSQL: `INSERT INTO coordinate ( latitude, longitude) VALUES (?, ?)`,
         insertCols: ["latitude", "longitude"],
         selectCols: ["latitude", "longitude"],
         expectCols: ["id", "latitude", "longitude"],
-        selectSQL: `SELECT id, latitude, longitude FROM coordinate WHERE latitude=? AND longitude=?`
+        selectSQL: `SELECT id, latitude, longitude FROM coordinate WHERE latitude=? AND longitude=?`,
     },
     contributingFactorTest: {
         testLabel: "TEST 4: ContributingFactor Test: ",
         tableName: "contributing_factor",
         table: {
-            factor: faker.company.bs()
+            factor: faker.company.bs(),
         },
         insertSQL: `INSERT INTO contributing_factor (factor) VALUES (?)`,
         insertCols: ["factor"],
         selectCols: ["factor"],
         expectCols: ["id", "factor"],
-        selectSQL: `SELECT id, factor FROM contributing_factor WHERE factor = ? `
+        selectSQL: `SELECT id, factor FROM contributing_factor WHERE factor = ? `,
     },
     collisionTest: {
         testLabel: "TEST 5: Collision Test: ",
         tableName: "collision",
         table: {
-            unique_key: faker.random.number(),
+            // unique_key: faker.random.number(),
+            unique_key: faker.datatype.number(),
             date: faker.date.past(),
-            number_of_persons_injured: faker.random.number(),
-            number_of_persons_killed: faker.random.number(),
-            number_of_pedestrians_injured: faker.random.number(),
-            number_of_pedestrians_killed: faker.random.number(),
-            number_of_cyclists_injured: faker.random.number(),
-            number_of_cyclists_killed: faker.random.number(),
-            number_of_motorists_injured: faker.random.number(),
-            number_of_motorists_killed: faker.random.number()
+            number_of_persons_injured: faker.datatype.number(),
+            number_of_persons_killed: faker.datatype.number(),
+            number_of_pedestrians_injured: faker.datatype.number(),
+            number_of_pedestrians_killed: faker.datatype.number(),
+            number_of_cyclists_injured: faker.datatype.number(),
+            number_of_cyclists_killed: faker.datatype.number(),
+            number_of_motorists_injured: faker.datatype.number(),
+            number_of_motorists_killed: faker.datatype.number(),
         },
         insertCols: [
             "unique_key",
@@ -111,7 +110,7 @@ let dbTest = {
             "cross_street_id",
             "off_street_id",
             "on_street_id",
-            "coordinate_id"
+            "coordinate_id",
         ],
         selectCols: [
             "unique_key",
@@ -123,7 +122,7 @@ let dbTest = {
             "number_of_cyclists_injured",
             "number_of_cyclists_killed",
             "number_of_motorists_injured",
-            "number_of_motorists_killed"
+            "number_of_motorists_killed",
         ],
         expectCols: [
             "unique_key",
@@ -139,7 +138,7 @@ let dbTest = {
             "cross_street_id",
             "off_street_id",
             "on_street_id",
-            "coordinate_id"
+            "coordinate_id",
         ],
         insertSQL: ` 
                       INSERT INTO collision (
@@ -184,7 +183,7 @@ let dbTest = {
             AND number_of_cyclists_injured    = ?
             AND number_of_cyclists_killed     = ?
             AND number_of_motorists_injured   = ?
-            AND number_of_motorists_killed    = ? `
+            AND number_of_motorists_killed    = ? `,
     },
     collisionVehicleTest: {
         testLabel: "TEST 6: Collision-Vehicle Test: ",
@@ -205,7 +204,7 @@ let dbTest = {
                       SELECT collision_unique_key, vehicle_id, collision_vehicle_index  FROM collision_vehicle
                           WHERE  collision_unique_key = ?
                           AND    vehicle_id = ?
-                          AND    collision_vehicle_index = ?`
+                          AND    collision_vehicle_index = ?`,
     },
     collisionContributingFactorTest: {
         testLabel: "TEST 7: Collision-ContributingFactor Test: ",
@@ -214,17 +213,17 @@ let dbTest = {
         insertCols: [
             "collision_unique_key",
             "contributing_factor_id",
-            "collision_contributing_vehicle_index"
+            "collision_contributing_vehicle_index",
         ],
         selectCols: [
             "collision_unique_key",
             "contributing_factor_id",
-            "collision_contributing_vehicle_index"
+            "collision_contributing_vehicle_index",
         ],
         expectCols: [
             "collision_unique_key",
             "contributing_factor_id",
-            "collision_contributing_vehicle_index"
+            "collision_contributing_vehicle_index",
         ],
         insertSQL: ` INSERT INTO collision_contributing_factor (
                       collision_unique_key,
@@ -233,12 +232,12 @@ let dbTest = {
         selectSQL: `SELECT collision_unique_key,contributing_factor_id ,collision_contributing_vehicle_index  FROM collision_contributing_factor
                       WHERE  collision_unique_key = ?
                       AND    contributing_factor_id = ?
-                      AND    collision_contributing_vehicle_index = ? `
-    }
+                      AND    collision_contributing_vehicle_index = ? `,
+    },
 };
 
 let toDelete = {
-    tableNames: []
+    tableNames: [],
 };
 
 /***************************************************************************
@@ -252,14 +251,14 @@ async function main() {
      ***************************************************************************/
     await describe("Insert Street Tests\n", () => {
         let { testLabel } = dbTest.streetTest;
-        it(`${testLabel} has a zip code before insert`, function(done) {
+        it(`${testLabel} has a zip code before insert`, function (done) {
             let { zip_code } = dbTest.streetTest.table;
             console.log(`Street Test Table: `, dbTest.streetTest.table);
             expect(zip_code, "zip_code must have a length").to.have.lengthOf.above(4);
             done();
         });
 
-        it(`${testLabel} valid street values after insert`, function(done) {
+        it(`${testLabel} valid street values after insert`, function (done) {
             (async () => {
                 try {
                     const result = await insertSingleRowTest(testDb, dbTest.streetTest);
@@ -270,22 +269,24 @@ async function main() {
                         tableName: "street",
                         col: {
                             name: "id",
-                            val: result.id
-                        }
+                            val: result.id,
+                        },
                     });
                     printBigDoneGood(testLabel);
-                    done();
+                    // done(done);
                 } catch (e) {
                     printBigDoneBad(testLabel, e);
-                    done(e);
+                    // done(done);
                 }
             })();
+            done(); // Good
         });
+        done(); // Good
     });
 
     await describe("Insert Vehicle Tests\n", () => {
         let { testLabel } = dbTest.vehicleTest;
-        it(`${testLabel} return valid data after inserting`, function(done) {
+        it(`${testLabel} return valid data after inserting`, function (done) {
             (async () => {
                 try {
                     const result = await insertSingleRowTest(testDb, dbTest.vehicleTest);
@@ -296,8 +297,8 @@ async function main() {
                         tableName: "vehicle",
                         col: {
                             name: "id",
-                            val: result.id
-                        }
+                            val: result.id,
+                        },
                     });
                     printBigDoneGood(testLabel);
                     done();
@@ -311,7 +312,7 @@ async function main() {
 
     await describe("Insert CoOrdinate Tests\n", () => {
         let { testLabel } = dbTest.coOrdinateTest;
-        it(`${testLabel} returns valid data afer insert`, function(done) {
+        it(`${testLabel} returns valid data afer insert`, function (done) {
             (async () => {
                 try {
                     const result = await insertSingleRowTest(testDb, dbTest.coOrdinateTest);
@@ -320,8 +321,8 @@ async function main() {
                         tableName: "coordinate",
                         col: {
                             name: "id",
-                            val: result.id
-                        }
+                            val: result.id,
+                        },
                     });
                     printBigDoneGood(testLabel);
                     done();
@@ -336,7 +337,7 @@ async function main() {
     await describe("Insert ContributingFactor Tests\n", () => {
         let { testLabel } = dbTest.contributingFactorTest;
 
-        it(`${testLabel} returns correct data after insertin`, function(done) {
+        it(`${testLabel} returns correct data after insertin`, function (done) {
             (async () => {
                 try {
                     const result = await insertSingleRowTest(testDb, dbTest.contributingFactorTest);
@@ -345,8 +346,8 @@ async function main() {
                         tableName: "contributing_factor",
                         col: {
                             name: "id",
-                            val: result.id
-                        }
+                            val: result.id,
+                        },
                     });
                     printBigDoneGood(testLabel);
                     done();
@@ -360,14 +361,14 @@ async function main() {
 
     await describe("Insert Collision Tests\n", () => {
         let { testLabel } = dbTest.collisionTest;
-        it(`${testLabel} table has Street and CoOrdinate Ids before inserting`, function(done) {
+        it(`${testLabel} table has Street and CoOrdinate Ids before inserting`, function (done) {
             let { cross_street_id, coordinate_id } = dbTest.collisionTest.table;
             expect(cross_street_id, "cross_street_id must have a value").to.be.above(0);
             expect(coordinate_id, "cross_street_id must have a value").to.be.above(0);
             done();
         });
 
-        it(`${testLabel} return valid data after inserting`, function(done) {
+        it(`${testLabel} return valid data after inserting`, function (done) {
             (async () => {
                 try {
                     let result = await insertSingleRowTest(testDb, dbTest.collisionTest);
@@ -376,8 +377,8 @@ async function main() {
                         tableName: "collision",
                         col: {
                             name: "unique_key",
-                            val: result.unique_key
-                        }
+                            val: result.unique_key,
+                        },
                     });
 
                     dbTest.collisionContributingFactorTest.table.collision_unique_key =
@@ -404,7 +405,7 @@ async function main() {
         dbTest.collisionVehicleTest.table.collision_vehicle_index = idx;
         dbTest.collisionContributingFactorTest.table.collision_contributing_vehicle_index = idx;
 
-        it(`${testLabel} needs data from Collision table`, function(done) {
+        it(`${testLabel} needs data from Collision table`, function (done) {
             let { collision_unique_key, vehicle_id } = dbTest.collisionVehicleTest.table;
             expect(vehicle_id, `${testLabel} needs 'vehicle_id'`).to.be.above(0);
             expect(collision_unique_key, `${testLabel} needs 'collision_unique_key'`).to.be.above(
@@ -413,7 +414,7 @@ async function main() {
             done();
         });
 
-        it(`${testLabel} return valid Values after inserting`, function(done) {
+        it(`${testLabel} return valid Values after inserting`, function (done) {
             (async () => {
                 try {
                     const result = await insertSingleRowTest(testDb, dbTest.collisionVehicleTest);
@@ -422,8 +423,8 @@ async function main() {
                         tableName: "collision_vehicle",
                         col: {
                             name: "collision_unique_key",
-                            val: dbTest.collisionTest.table.unique_key
-                        }
+                            val: dbTest.collisionTest.table.unique_key,
+                        },
                     });
                     printBigDoneGood(testLabel);
                     done();
@@ -441,11 +442,9 @@ async function main() {
     await describe("Insert Collision-ContributingFactor Tests\n", () => {
         let { testLabel } = dbTest.collisionContributingFactorTest;
 
-        it(`${testLabel} Expects Values from Collision Table`, function(done) {
-            let {
-                collision_unique_key,
-                contributing_factor_id
-            } = dbTest.collisionContributingFactorTest.table;
+        it(`${testLabel} Expects Values from Collision Table`, function (done) {
+            let { collision_unique_key, contributing_factor_id } =
+                dbTest.collisionContributingFactorTest.table;
             expect(collision_unique_key, `${testLabel} needs 'collision_unique_key'`).to.be.above(
                 0
             );
@@ -453,7 +452,7 @@ async function main() {
             done();
         });
 
-        it(`${testLabel} valid Values after inserting`, function(done) {
+        it(`${testLabel} valid Values after inserting`, function (done) {
             let { testLabel } = dbTest.collisionContributingFactorTest;
             (async () => {
                 try {
@@ -465,8 +464,8 @@ async function main() {
                         tableName: "collision_contributing_factor",
                         col: {
                             name: "collision_unique_key",
-                            val: dbTest.collisionTest.table.unique_key
-                        }
+                            val: dbTest.collisionTest.table.unique_key,
+                        },
                     });
                     printBigDoneGood(testLabel);
                     done();
@@ -518,14 +517,14 @@ async function main() {
 /* Test Helper Functions */
 async function insertSingleRowTest(testDb, theTest) {
     let testLabel = `${logL}:'${theTest.testLabel}' insertIfNotExists: `;
-    let insertParam = theTest.insertCols.map(col => theTest.table[col]);
-    let selectParam = theTest.selectCols.map(col => theTest.table[col]);
+    let insertParam = theTest.insertCols.map((col) => theTest.table[col]);
+    let selectParam = theTest.selectCols.map((col) => theTest.table[col]);
     let { insertSQL, selectSQL } = theTest;
     let param = {
         insertSQL,
         selectSQL,
         insertParam,
-        selectParam
+        selectParam,
     };
 
     const db = new CollisionDb(testDb);
